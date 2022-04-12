@@ -21,10 +21,12 @@ given ref_list_int: RefValue[List[Int], List, Int] with {
   override def get(v: List[Int]): List[Int] = v
 }
 
-def use_using[T, M[_], V](v: T)(using ref: RefValue[T, M, V], m: Monad[M]): M[V] = m.map(ref.get(v))(identity)
+def use_using[T, M[_], V](
+    v: T
+)(using ref: RefValue[T, M, V], m: Monad[M]): M[V] = m.map(ref.get(v))(identity)
 def test_function_above = {
   /* 如果交换上面use_using的ref和m顺序，以下代码会报错：
-   * ambiguous implicit arguments: both value catsStdInstancesForOption in trait OptionInstances and 
+   * ambiguous implicit arguments: both value catsStdInstancesForOption in trait OptionInstances and
    * value catsStdInstancesForLazyList in trait LazyListInstances match type cats.Monad[M] of parameter m of method use_usingbloop
    */
   use_using(List(1))
@@ -51,6 +53,14 @@ given some_t(using
 def test[T](using t: Test[T]): t.M[t.V] = {
   t.monad.pure(t.monoid.empty)
 }
+
+// 缺点：=:= 似乎不适用于F[_]，无法保证T1.M与T2.M相同
+// 而如果是最初的写法，就可以非常简单地写
+// def connect[T1, T2, M[_], V1, V2](t1: T1, t2: T2)(using ref1: RefValue[T1, M, V1], ref2: RefValue[T2, M, V2])
+def connect[T1, T2](t1: T1, t2: T2)(using test1: Test[T1], test2: Test[T2])(
+    using test1.V =:= test2.V
+    //, test1.M =:= test2.M
+): Unit = {}
 
 @main def hello: Unit = {
   println(test)
